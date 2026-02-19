@@ -1,51 +1,59 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<NoWarn>CS0618</NoWarn>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
+	<!-- Managed directory path (Windows) -->
+	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+		<ManagedDir>F:\Games\SteamLibrary\steamapps\common\PEAK\PEAK_Data\Managed\</ManagedDir>
+		<BepInExDir>F:\Games\SteamLibrary\steamapps\common\PEAK\BepInEx\</BepInExDir>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\BepInEx\core\0Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp" Publicize="true">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\PEAK_Data\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\BepInEx\core\BepInEx.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx.Harmony">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\BepInEx\core\BepInEx.Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="Unity.TextMeshPro">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\PEAK_Data\Managed\Unity.TextMeshPro.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\PEAK_Data\Managed\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.AnimationModule">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\PEAK_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\PEAK_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.TextRenderingModule">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\PEAK_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UI">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\PEAK_Data\Managed\UnityEngine.UI.dll</HintPath>
-    </Reference>
-    <Reference Include="Zorro.Core.Runtime">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\PEAK\PEAK_Data\Managed\Zorro.Core.Runtime.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+	<!-- Managed directory path (Linux) -->
+	<PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+		<ManagedDir>$(HOME)/.local/share/Steam/steamapps/common/PEAK/PEAK_Data/Managed/</ManagedDir>
+		<BepInExDir>$(HOME)/.local/share/Steam/steamapps/common/PEAK/BepInEx/</BepInExDir>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<RestoreAdditionalProjectSources>
+			https://nuget.bepinex.dev/v3/index.json;
+			https://nuget.windows10ce.com/nuget/v3/index.json
+		</RestoreAdditionalProjectSources>
+		<BaseOutputPath>F:\Games\SteamLibrary\steamapps\common\PEAK\BepInEx\plugins</BaseOutputPath>
+		<SignAssembly>False</SignAssembly>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DebugType>none</DebugType>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DebugType>none</DebugType>
+	</PropertyGroup>
+
+	<!-- Core modding libraries (via NuGet, no manual path needed) -->
+	<ItemGroup>
+		<PackageReference Include="BepInEx.Core" Version="5.4.21" />
+		<PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+		<PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" PrivateAssets="all" />
+		<PackageReference Include="Hamunii.BepInEx.AutoPlugin" Version="2.0.*" PrivateAssets="all" />
+	</ItemGroup>
+
+	<!-- Local game references (auto-discovered from ManagedDir) -->
+	<ItemGroup>
+		<LocalReferences Include="$(ManagedDir)*.dll" Exclude="
+        $(ManagedDir)Mono*.dll;
+        $(ManagedDir)netstandard.dll;
+        $(ManagedDir)System*.dll;
+        $(ManagedDir)mscorlib.dll" />
+
+		<Reference Include="@(LocalReferences)" Private="false" />
+		<Reference Include="$(ManagedDir)Assembly-CSharp.dll" Private="false" Publicize="true" />
+	</ItemGroup>
 
 </Project>

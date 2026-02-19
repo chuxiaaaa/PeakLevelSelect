@@ -22,7 +22,7 @@ using static LocalizedText;
 
 namespace PeakLevelSelect
 {
-    [BepInEx.BepInPlugin("PeakLevelSelect", "PeakLevelSelect", "1.0.2")]
+    [BepInEx.BepInPlugin("PeakLevelSelect", "PeakLevelSelect", "1.0.3")]
     public class PeakLevelSelectPlugin : BepInEx.BaseUnityPlugin
     {
         internal static ManualLogSource logger = null;
@@ -152,10 +152,10 @@ namespace PeakLevelSelect
         {
             dropDownText.text = GetText("Daily");
             var map = SingletonAsset<MapBaker>.Instance;
-            if (todayLevelIndex != -3 && todayLevelIndex < map.selectedBiomes.Count)
+            if (todayLevelIndex != -3 && todayLevelIndex < map.AllLevels.Length)
             {
                 To1.text = todayLevelIndex.ToString();
-                dropDownText.text += $"({string.Join(",", map.selectedBiomes[todayLevelIndex].selectedBiomes.Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano).Select(x => LocalizedText.GetText(x.ToString())))})";
+                dropDownText.text += $"({ParseBiomeID(map.GetBiomeID(todayLevelIndex))})";
             }
             else
             {
@@ -163,6 +163,36 @@ namespace PeakLevelSelect
             }
             PeakLevelSelectPlugin.SelectedLevel.Value = -1;
             buttons[1].GetComponent<Image>().color = new Color(0.9804f, 0.8075f, 0.1922f, 1);
+        }
+
+        // BiomeID 字符 → BiomeType 枚举名称的映射
+        private static readonly Dictionary<char, string> BiomeCharToName = new Dictionary<char, string>
+        {
+            { 'S', "Shore" },
+            { 'T', "Tropics" },
+            { 'A', "Alpine" },
+            { 'V', "Volcano" },
+            { 'P', "Peak" },
+            { 'M', "Mesa" },
+            { 'R', "Roots" }
+        };
+
+        /// <summary>
+        /// 将 BiomeID 缩写字符串（如 "STAV"）解析为本地化生态群系名称，
+        /// 过滤掉 Shore(S) 和 Volcano(V)，用逗号拼接。
+        /// </summary>
+        private static string ParseBiomeID(string biomeID)
+        {
+            var names = new List<string>();
+            foreach (char c in biomeID)
+            {
+                if (c == 'S' || c == 'V') continue; // 过滤 Shore 和 Volcano
+                if (BiomeCharToName.TryGetValue(c, out string biomeName))
+                {
+                    names.Add(LocalizedText.GetText(biomeName));
+                }
+            }
+            return string.Join(",", names);
         }
 
         private static int todayLevelIndex;
@@ -365,9 +395,9 @@ namespace PeakLevelSelect
                 Canvas_BoardingPass.SetActive(true);
                 Canvas_BoardingPass.SetActive(false);
 
-                for (int i = 0; i < map.selectedBiomes.Count; i++)
+                for (int i = 0; i < map.AllLevels.Length; i++)
                 {
-                    string text = $"{GetText("Level", i)}({string.Join(",", map.selectedBiomes[i].selectedBiomes.Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano).Select(x => LocalizedText.GetText(x.ToString())))})";
+                    string text = $"{GetText("Level", i)}({ParseBiomeID(map.GetBiomeID(i))})";
                     if (i == todayLevelIndex)
                     {
                         text = $"({GetText("Today")}){text}";
