@@ -22,7 +22,7 @@ using static LocalizedText;
 
 namespace PeakLevelSelect
 {
-    [BepInEx.BepInPlugin("PeakLevelSelect", "PeakLevelSelect", "1.0.3")]
+    [BepInEx.BepInPlugin("PeakLevelSelect", "PeakLevelSelect", "1.0.3.1")]
     public class PeakLevelSelectPlugin : BepInEx.BaseUnityPlugin
     {
         internal static ManualLogSource logger = null;
@@ -78,6 +78,7 @@ namespace PeakLevelSelect
             langTable.Add("Daily", MakeList((Language.English, "Daily"), (Language.SimplifiedChinese, "当天地图")));
             langTable.Add("Level", MakeList((Language.English, "Level_{0}"), (Language.SimplifiedChinese, "轮换{0}")));
             langTable.Add("Today", MakeList((Language.English, "Today"), (Language.SimplifiedChinese, "今日地图")));
+            langTable.Add("Generated", MakeList((Language.English, "Generated"), (Language.SimplifiedChinese, "随机生成")));
             NextLevelService service = GameHandler.GetService<NextLevelService>();
             if (service != null && service.Data.IsSome)
             {
@@ -155,7 +156,7 @@ namespace PeakLevelSelect
             if (todayLevelIndex != -3 && todayLevelIndex < map.AllLevels.Length)
             {
                 To1.text = todayLevelIndex.ToString();
-                dropDownText.text += $"({ParseBiomeID(map.GetBiomeID(todayLevelIndex))})";
+                dropDownText.text += $"({todayLevelIndex})";
             }
             else
             {
@@ -165,35 +166,7 @@ namespace PeakLevelSelect
             buttons[1].GetComponent<Image>().color = new Color(0.9804f, 0.8075f, 0.1922f, 1);
         }
 
-        // BiomeID 字符 → BiomeType 枚举名称的映射
-        private static readonly Dictionary<char, string> BiomeCharToName = new Dictionary<char, string>
-        {
-            { 'S', "Shore" },
-            { 'T', "Tropics" },
-            { 'A', "Alpine" },
-            { 'V', "Volcano" },
-            { 'P', "Peak" },
-            { 'M', "Mesa" },
-            { 'R', "Roots" }
-        };
 
-        /// <summary>
-        /// 将 BiomeID 缩写字符串（如 "STAV"）解析为本地化生态群系名称，
-        /// 过滤掉 Shore(S) 和 Volcano(V)，用逗号拼接。
-        /// </summary>
-        private static string ParseBiomeID(string biomeID)
-        {
-            var names = new List<string>();
-            foreach (char c in biomeID)
-            {
-                if (c == 'S' || c == 'V') continue; // 过滤 Shore 和 Volcano
-                if (BiomeCharToName.TryGetValue(c, out string biomeName))
-                {
-                    names.Add(LocalizedText.GetText(biomeName));
-                }
-            }
-            return string.Join(",", names);
-        }
 
         private static int todayLevelIndex;
 
@@ -397,7 +370,7 @@ namespace PeakLevelSelect
 
                 for (int i = 0; i < map.AllLevels.Length; i++)
                 {
-                    string text = $"{GetText("Level", i)}({ParseBiomeID(map.GetBiomeID(i))})";
+                    string text = GetText("Level", i);
                     if (i == todayLevelIndex)
                     {
                         text = $"({GetText("Today")}){text}";
