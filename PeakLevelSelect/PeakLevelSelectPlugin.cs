@@ -22,7 +22,7 @@ using static LocalizedText;
 
 namespace PeakLevelSelect
 {
-    [BepInEx.BepInPlugin("PeakLevelSelect", "PeakLevelSelect", "1.0.2")]
+    [BepInEx.BepInPlugin("PeakLevelSelect", "PeakLevelSelect", "1.0.3.1")]
     public class PeakLevelSelectPlugin : BepInEx.BaseUnityPlugin
     {
         internal static ManualLogSource logger = null;
@@ -78,6 +78,7 @@ namespace PeakLevelSelect
             langTable.Add("Daily", MakeList((Language.English, "Daily"), (Language.SimplifiedChinese, "当天地图")));
             langTable.Add("Level", MakeList((Language.English, "Level_{0}"), (Language.SimplifiedChinese, "轮换{0}")));
             langTable.Add("Today", MakeList((Language.English, "Today"), (Language.SimplifiedChinese, "今日地图")));
+            langTable.Add("Generated", MakeList((Language.English, "Generated"), (Language.SimplifiedChinese, "随机生成")));
             NextLevelService service = GameHandler.GetService<NextLevelService>();
             if (service != null && service.Data.IsSome)
             {
@@ -152,10 +153,10 @@ namespace PeakLevelSelect
         {
             dropDownText.text = GetText("Daily");
             var map = SingletonAsset<MapBaker>.Instance;
-            if (todayLevelIndex != -3 && todayLevelIndex < map.selectedBiomes.Count)
+            if (todayLevelIndex != -3 && todayLevelIndex < map.AllLevels.Length)
             {
                 To1.text = todayLevelIndex.ToString();
-                dropDownText.text += $"({string.Join(",", map.selectedBiomes[todayLevelIndex].selectedBiomes.Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano).Select(x => LocalizedText.GetText(x.ToString())))})";
+                dropDownText.text += $"({todayLevelIndex})";
             }
             else
             {
@@ -164,6 +165,8 @@ namespace PeakLevelSelect
             PeakLevelSelectPlugin.SelectedLevel.Value = -1;
             buttons[1].GetComponent<Image>().color = new Color(0.9804f, 0.8075f, 0.1922f, 1);
         }
+
+
 
         private static int todayLevelIndex;
 
@@ -365,9 +368,9 @@ namespace PeakLevelSelect
                 Canvas_BoardingPass.SetActive(true);
                 Canvas_BoardingPass.SetActive(false);
 
-                for (int i = 0; i < map.selectedBiomes.Count; i++)
+                for (int i = 0; i < map.AllLevels.Length; i++)
                 {
-                    string text = $"{GetText("Level", i)}({string.Join(",", map.selectedBiomes[i].selectedBiomes.Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano).Select(x => LocalizedText.GetText(x.ToString())))})";
+                    string text = GetText("Level", i);
                     if (i == todayLevelIndex)
                     {
                         text = $"({GetText("Today")}){text}";
