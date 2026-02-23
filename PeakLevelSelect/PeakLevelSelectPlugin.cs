@@ -115,6 +115,7 @@ namespace PeakLevelSelect
             buttons.Add(button1);
             float buttonWidth = button1.GetComponent<RectTransform>().sizeDelta.x;
             var DailyText = GetText("Daily");
+           
             if (todayLevelIndex != -3)
             {
                 DailyText += $"({todayLevelIndex})";
@@ -187,8 +188,6 @@ namespace PeakLevelSelect
             {
                 list[(int)lang] = text;
             }
-
-
             for (int i = 0; i < LocalizedText.LANGUAGE_COUNT; i++)
             {
                 if (string.IsNullOrEmpty(list[i]))
