@@ -57,13 +57,13 @@ namespace PeakLevelSelect
         {
             if (PeakLevelSelectPlugin.SelectedLevel.Value == -2)
             {
-                levelIndex = UnityEngine.Random.Range(0, SingletonAsset<MapBaker>.Instance.AllLevels.Length);
+                levelIndex = UnityEngine.Random.Range(0, SingletonAsset<MapBaker>.Instance.ScenePaths.Length);
             }
             else if (PeakLevelSelectPlugin.SelectedLevel.Value == -1)
             {
                 levelIndex = todayLevelIndex;
             }
-            else if (PeakLevelSelectPlugin.SelectedLevel.Value < SingletonAsset<MapBaker>.Instance.AllLevels.Length)
+            else if (PeakLevelSelectPlugin.SelectedLevel.Value < SingletonAsset<MapBaker>.Instance.ScenePaths.Length)
             {
                 levelIndex = PeakLevelSelectPlugin.SelectedLevel.Value;
             }
@@ -82,7 +82,7 @@ namespace PeakLevelSelect
             if (service != null && service.Data.IsSome)
             {
                 int levelIndex = service.Data.Value.CurrentLevelIndex + NextLevelService.debugLevelIndexOffset;
-                levelIndex %= SingletonAsset<MapBaker>.Instance.AllLevels.Length;
+                levelIndex %= SingletonAsset<MapBaker>.Instance.ScenePaths.Length;
                 todayLevelIndex = levelIndex;
             }
             else
@@ -153,10 +153,17 @@ namespace PeakLevelSelect
         {
             dropDownText.text = GetText("Daily");
             var map = SingletonAsset<MapBaker>.Instance;
-            if (todayLevelIndex != -3 && todayLevelIndex < map.selectedBiomes.Count)
+            if (todayLevelIndex != -3 && todayLevelIndex < map.ScenePaths.Length)
             {
                 To1.text = todayLevelIndex.ToString();
-                dropDownText.text += $"({string.Join(",", map.selectedBiomes[todayLevelIndex].selectedBiomes.Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano).Select(x => LocalizedText.GetText(x.ToString())))})";
+                
+                // 暂时放弃显示生态功能
+                /* string biomeIdStr = map.GetBiomeID(todayLevelIndex);
+                string joinedBiomes = ParseBiomeID(biomeIdStr);
+                if (!string.IsNullOrEmpty(joinedBiomes))
+                {
+                    dropDownText.text += $"({joinedBiomes})";
+                } */
             }
             else
             {
@@ -179,6 +186,33 @@ namespace PeakLevelSelect
         private static TextMeshProUGUI To1;
 
         private static Image dropdownImage;
+
+        /* 废弃的生态映射表和解析方法
+        private static readonly Dictionary<char, string> BiomeCharToName = new Dictionary<char, string>
+        {
+            { 'S', "Shore" },
+            { 'T', "Tropics" },
+            { 'A', "Alpine" },
+            { 'V', "Volcano" },
+            { 'P', "Peak" },
+            { 'M', "Mesa" },
+            { 'R', "Roots" }
+        };
+
+        private static string ParseBiomeID(string biomeID)
+        {
+            if (string.IsNullOrEmpty(biomeID)) return "";
+            var list = new List<string>();
+            foreach (char c in biomeID)
+            {
+                if (c != 'S' && c != 'V' && BiomeCharToName.TryGetValue(c, out string value))
+                {
+                    list.Add(global::LocalizedText.GetText(value));
+                }
+            }
+            return string.Join(",", list);
+        }
+        */
 
         private static List<string> MakeList(params (LocalizedText.Language lang, string text)[] items)
         {
@@ -264,8 +298,8 @@ namespace PeakLevelSelect
                 templateRect.anchorMin = new Vector2(0, 0);
                 templateRect.anchorMax = new Vector2(1, 0);
                 templateRect.pivot = new Vector2(0.5f, 1);
-                PeakLevelSelectPlugin.logger.LogInfo($"AllLevels: {map.AllLevels.Length}");
-                templateRect.sizeDelta = new Vector2(0, map.AllLevels.Length * 25);
+                PeakLevelSelectPlugin.logger.LogInfo($"ScenePaths: {map.ScenePaths.Length}");
+                templateRect.sizeDelta = new Vector2(0, map.ScenePaths.Length * 25);
 
 
                 var templateImage = templateGO.AddComponent<Image>();
@@ -364,9 +398,11 @@ namespace PeakLevelSelect
                 Canvas_BoardingPass.SetActive(true);
                 Canvas_BoardingPass.SetActive(false);
 
-                for (int i = 0; i < map.selectedBiomes.Count; i++)
+                for (int i = 0; i < map.ScenePaths.Length; i++)
                 {
-                    string text = $"{GetText("Level", i)}({string.Join(",", map.selectedBiomes[i].selectedBiomes.Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano).Select(x => LocalizedText.GetText(x.ToString())))})";
+                    // string joinedBiomes = ParseBiomeID(map.GetBiomeID(i));
+                    // string text = $"{GetText("Level", i)}({joinedBiomes})";
+                    string text = $"{GetText("Level", i)}";
                     if (i == todayLevelIndex)
                     {
                         text = $"({GetText("Today")}){text}";
@@ -381,7 +417,7 @@ namespace PeakLevelSelect
                 dropdownRect.sizeDelta = new Vector2(maxWidth + 80, dropdownRect.sizeDelta.y);
                 float itemHeight = 25f;
                 float maxVisibleCount = 8;
-                float templateHeight = Mathf.Min(map.AllLevels.Length * itemHeight, maxVisibleCount * itemHeight);
+                float templateHeight = Mathf.Min(map.ScenePaths.Length * itemHeight, maxVisibleCount * itemHeight);
                 templateRect.sizeDelta = new Vector2(0, templateHeight);
                 var scrollRect = templateGO.AddComponent<ScrollRect>();
                 scrollRect.content = contentRect;
@@ -394,7 +430,7 @@ namespace PeakLevelSelect
 
                 if (viewportGO.GetComponent<RectMask2D>() == null)
                     viewportGO.AddComponent<RectMask2D>();
-                contentRect.sizeDelta = new Vector2(0, map.AllLevels.Length * itemHeight);
+                contentRect.sizeDelta = new Vector2(0, map.ScenePaths.Length * itemHeight);
                 dropdown.onValueChanged.AddListener((value) =>
                 {
                     To1.text = value.ToString();
