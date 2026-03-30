@@ -156,14 +156,25 @@ namespace PeakLevelSelect
             if (todayLevelIndex != -3 && todayLevelIndex < map.ScenePaths.Length)
             {
                 To1.text = todayLevelIndex.ToString();
+                if (map.ScenePaths.Length == map.selectedBiomes.Count)
+                {
+                    var biomeStr = string.Join(",", map.selectedBiomes[todayLevelIndex].biomeTypes
+                        .Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano)
+                        .Select(x => LocalizedText.GetText(x.ToString())));
+                    dropDownText.text += $"({biomeStr})";
+                }
+                else
+                {
+                    Debug.LogError($"Scene paths is {map.ScenePaths.Length} but selected biomes is {map.selectedBiomes.Count}");
+                }
                 
                 // 暂时放弃显示生态功能
-                /* string biomeIdStr = map.GetBiomeID(todayLevelIndex);
+                string biomeIdStr = map.GetBiomeID(todayLevelIndex);
                 string joinedBiomes = ParseBiomeID(biomeIdStr);
                 if (!string.IsNullOrEmpty(joinedBiomes))
                 {
                     dropDownText.text += $"({joinedBiomes})";
-                } */
+                } 
             }
             else
             {
@@ -187,7 +198,6 @@ namespace PeakLevelSelect
 
         private static Image dropdownImage;
 
-        /* 废弃的生态映射表和解析方法
         private static readonly Dictionary<char, string> BiomeCharToName = new Dictionary<char, string>
         {
             { 'S', "Shore" },
@@ -212,7 +222,6 @@ namespace PeakLevelSelect
             }
             return string.Join(",", list);
         }
-        */
 
         private static List<string> MakeList(params (LocalizedText.Language lang, string text)[] items)
         {
@@ -400,9 +409,11 @@ namespace PeakLevelSelect
 
                 for (int i = 0; i < map.ScenePaths.Length; i++)
                 {
-                    // string joinedBiomes = ParseBiomeID(map.GetBiomeID(i));
-                    // string text = $"{GetText("Level", i)}({joinedBiomes})";
-                    string text = $"{GetText("Level", i)}";
+                    var levelStr = string.Join(",", map.selectedBiomes[i].biomeTypes
+                        .Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano)
+                        .Select(x => LocalizedText.GetText(x.ToString())));
+                    string text = $"{GetText("Level", i)}({levelStr})";
+                    
                     if (i == todayLevelIndex)
                     {
                         text = $"({GetText("Today")}){text}";
@@ -480,11 +491,15 @@ namespace PeakLevelSelect
 
         private static GameObject CreateButton(GameObject referenceButton, Transform parent, string buttonText, Vector2 position, UnityEngine.Events.UnityAction<GameObject> onClick)
         {
-
+            if (!referenceButton)
+            {
+                Debug.LogError("ReferenceButton is null!");
+                return null;
+            }
             GameObject button = GameObject.Instantiate(referenceButton);
             button.name = "Button_" + buttonText;
             button.transform.SetParent(parent, false);
-            GameObject.Destroy(button.transform.Find("Image").gameObject);
+            GameObject.Destroy(button.transform.Find("Image")?.gameObject);
             GameObject.Destroy(button.transform.GetComponent<Animator>());
             if (image == null)
             {
