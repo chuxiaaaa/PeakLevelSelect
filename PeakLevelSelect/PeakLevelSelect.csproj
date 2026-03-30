@@ -9,7 +9,7 @@
 
   <!-- Managed directory path (windows) -->
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <ManagedDir>F:\Games\SteamLibrary\steamapps\common\PEAK\PEAK_Data\Managed\</ManagedDir>
+    <ManagedDir>C:\Program Files (x86)\Steam\steamapps\common\PEAK\PEAK_Data\Managed\</ManagedDir>
   </PropertyGroup>
 
   <!-- Managed directory path (linux) -->

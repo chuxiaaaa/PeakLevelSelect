@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using TMPro;
 
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 using Zorro.Core;
@@ -22,7 +23,7 @@ using static LocalizedText;
 
 namespace PeakLevelSelect
 {
-    [BepInEx.BepInPlugin("PeakLevelSelect", "PeakLevelSelect", "1.0.2")]
+    [BepInEx.BepInPlugin("PeakLevelSelect", "PeakLevelSelect", "1.0.4")]
     public class PeakLevelSelectPlugin : BepInEx.BaseUnityPlugin
     {
         internal static ManualLogSource logger = null;
@@ -39,10 +40,30 @@ namespace PeakLevelSelect
         }
     }
 
+
+
     [HarmonyWrapSafe]
     public static class GUIManagerPatch
     {
         private static Dictionary<string, List<string>> langTable { get; set; }
+
+        [HarmonyPatch(typeof(BoardingPass), "UpdateAscent")]
+        [HarmonyPostfix]
+        public static void OnEnable()
+        {
+            bool value = RunSettings.IsCustomRun;
+            GUIManagerPatch.dropDown.gameObject.SetActive(!value);
+            foreach (var item in GUIManagerPatch.buttons)
+            {
+                item.gameObject.SetActive(!value);
+            }
+            if (value)
+            {
+                var level = GUIManagerPatch.GetLevel();
+                var biomeStr = string.Join(",", SingletonAsset<MapBaker>.Instance.selectedBiomes[level].biomeTypes.Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano).Select(x => LocalizedText.GetText(x.ToString())));
+                GUIManager.instance.boardingPass.ascentDesc.text += $"\r\n\r\n{GUIManagerPatch.GetText("Level", level)}({biomeStr})";
+            }
+        }
 
         [HarmonyPatch(typeof(BoardingPass), "UpdateAscent")]
         [HarmonyPostfix]
@@ -55,18 +76,24 @@ namespace PeakLevelSelect
         [HarmonyPrefix]
         public static void GetLevel(ref int levelIndex)
         {
+            levelIndex = GetLevel();
+        }
+
+        public static int GetLevel()
+        {
             if (PeakLevelSelectPlugin.SelectedLevel.Value == -2)
             {
-                levelIndex = UnityEngine.Random.Range(0, SingletonAsset<MapBaker>.Instance.ScenePaths.Length);
+                return UnityEngine.Random.Range(0, SingletonAsset<MapBaker>.Instance.selectedBiomes.Count);
             }
             else if (PeakLevelSelectPlugin.SelectedLevel.Value == -1)
             {
-                levelIndex = todayLevelIndex;
+                return todayLevelIndex;
             }
-            else if (PeakLevelSelectPlugin.SelectedLevel.Value < SingletonAsset<MapBaker>.Instance.ScenePaths.Length)
+            else if (PeakLevelSelectPlugin.SelectedLevel.Value < SingletonAsset<MapBaker>.Instance.selectedBiomes.Count)
             {
-                levelIndex = PeakLevelSelectPlugin.SelectedLevel.Value;
+                return PeakLevelSelectPlugin.SelectedLevel.Value;
             }
+            throw new NotImplementedException();
         }
 
         [HarmonyPatch(typeof(GUIManager), "Start")]
@@ -115,7 +142,7 @@ namespace PeakLevelSelect
             buttons.Add(button1);
             float buttonWidth = button1.GetComponent<RectTransform>().sizeDelta.x;
             var DailyText = GetText("Daily");
-           
+
             if (todayLevelIndex != -3)
             {
                 DailyText += $"({todayLevelIndex})";
@@ -153,28 +180,31 @@ namespace PeakLevelSelect
         {
             dropDownText.text = GetText("Daily");
             var map = SingletonAsset<MapBaker>.Instance;
-            if (todayLevelIndex != -3 && todayLevelIndex < map.ScenePaths.Length)
+            if (todayLevelIndex != -3 && todayLevelIndex < map.selectedBiomes.Count)
             {
                 To1.text = todayLevelIndex.ToString();
-                if (map.ScenePaths.Length == map.selectedBiomes.Count)
-                {
-                    var biomeStr = string.Join(",", map.selectedBiomes[todayLevelIndex].biomeTypes
-                        .Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano)
-                        .Select(x => LocalizedText.GetText(x.ToString())));
-                    dropDownText.text += $"({biomeStr})";
-                }
-                else
-                {
-                    Debug.LogError($"Scene paths is {map.ScenePaths.Length} but selected biomes is {map.selectedBiomes.Count}");
-                }
-                
-                // 暂时放弃显示生态功能
+                var biomeStr = string.Join(",", map.selectedBiomes[todayLevelIndex].biomeTypes
+                .Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano)
+                .Select(x => LocalizedText.GetText(x.ToString())));
+                dropDownText.text += $"({biomeStr})";
+                //if (map.ScenePaths.Length == map.selectedBiomes.Count)
+                //{
+                //    var biomeStr = string.Join(",", map.selectedBiomes[todayLevelIndex].biomeTypes
+                //        .Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano)
+                //        .Select(x => LocalizedText.GetText(x.ToString())));
+                //    dropDownText.text += $"({biomeStr})";
+                //}
+                //else
+                //{
+                //    Debug.LogError($"Scene paths is {map.ScenePaths.Length} but selected biomes is {map.selectedBiomes.Count}");
+                //}
+
                 string biomeIdStr = map.GetBiomeID(todayLevelIndex);
                 string joinedBiomes = ParseBiomeID(biomeIdStr);
                 if (!string.IsNullOrEmpty(joinedBiomes))
                 {
                     dropDownText.text += $"({joinedBiomes})";
-                } 
+                }
             }
             else
             {
@@ -190,9 +220,10 @@ namespace PeakLevelSelect
 
         private static Image image;
 
-        private static List<GameObject> buttons { get; set; }
+        public static List<GameObject> buttons { get; set; }
 
-        private static TextMeshProUGUI dropDownText;
+        public static TextMeshProUGUI dropDownText;
+        public static GameObject dropDown;
 
         private static TextMeshProUGUI To1;
 
@@ -243,17 +274,17 @@ namespace PeakLevelSelect
         {
             try
             {
-                GameObject dropdownGO = new GameObject("CustomDropdown");
-                dropdownGO.transform.SetParent(panel, false);
+                dropDown = new GameObject("CustomDropdown");
+                dropDown.transform.SetParent(panel, false);
 
-                RectTransform dropdownRect = dropdownGO.AddComponent<RectTransform>();
+                RectTransform dropdownRect = dropDown.AddComponent<RectTransform>();
                 dropdownRect.anchorMin = new Vector2(0, 0);
                 dropdownRect.anchorMax = new Vector2(0, 0);
                 dropdownRect.pivot = new Vector2(0, 0);
                 dropdownRect.anchoredPosition = new Vector2(520, 75);
                 dropdownRect.sizeDelta = new Vector2(0, 65);
 
-                var backgroundImage = dropdownGO.AddComponent<Image>();
+                var backgroundImage = dropDown.AddComponent<Image>();
                 backgroundImage.sprite = image.sprite;
                 backgroundImage.color = image.color;
                 backgroundImage.type = image.type;
@@ -264,7 +295,7 @@ namespace PeakLevelSelect
                 dropdownImage = backgroundImage;
 
                 GameObject labelGO = new GameObject("Label");
-                labelGO.transform.SetParent(dropdownGO.transform, false);
+                labelGO.transform.SetParent(dropDown.transform, false);
 
                 var label = labelGO.AddComponent<TextMeshProUGUI>();
                 label.fontSize = 14;
@@ -281,7 +312,7 @@ namespace PeakLevelSelect
 
 
                 GameObject arrowGO = new GameObject("Arrow");
-                arrowGO.transform.SetParent(dropdownGO.transform, false);
+                arrowGO.transform.SetParent(dropDown.transform, false);
 
                 var arrow = arrowGO.AddComponent<TextMeshProUGUI>();
                 arrow.font = font;
@@ -298,7 +329,7 @@ namespace PeakLevelSelect
                 arrowRect.anchoredPosition = new Vector2(-20, 0);
 
                 GameObject templateGO = new GameObject("Template");
-                templateGO.transform.SetParent(dropdownGO.transform, false);
+                templateGO.transform.SetParent(dropDown.transform, false);
                 templateGO.SetActive(false);
 
                 var map = SingletonAsset<MapBaker>.Instance;
@@ -393,7 +424,7 @@ namespace PeakLevelSelect
                 itemLabelRect.offsetMin = new Vector2(30, 0);
                 itemLabelRect.offsetMax = new Vector2(-10, 0);
 
-                var dropdown = dropdownGO.AddComponent<TMP_Dropdown>();
+                var dropdown = dropDown.AddComponent<TMP_Dropdown>();
                 dropdown.targetGraphic = backgroundImage;
                 dropdown.captionText = label;
                 dropdown.template = templateRect;
@@ -406,14 +437,9 @@ namespace PeakLevelSelect
                 var Canvas_BoardingPass = GameObject.Find("GAME/GUIManager/Canvas_BoardingPass");
                 Canvas_BoardingPass.SetActive(true);
                 Canvas_BoardingPass.SetActive(false);
-
-                for (int i = 0; i < map.ScenePaths.Length; i++)
+                for (int i = 0; i < map.selectedBiomes.Count; i++)
                 {
-                    var levelStr = string.Join(",", map.selectedBiomes[i].biomeTypes
-                        .Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano)
-                        .Select(x => LocalizedText.GetText(x.ToString())));
-                    string text = $"{GetText("Level", i)}({levelStr})";
-                    
+                    string text = $"{GetText("Level", i)}({string.Join(",", map.selectedBiomes[i].biomeTypes.Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano).Select(x => LocalizedText.GetText(x.ToString())))})";
                     if (i == todayLevelIndex)
                     {
                         text = $"({GetText("Today")}){text}";
@@ -425,10 +451,28 @@ namespace PeakLevelSelect
                     }
                     dropdown.options.Add(new TMP_Dropdown.OptionData(text));
                 }
+                //for (int i = 0; i < map.ScenePaths.Length; i++)
+                //{
+                //    var levelStr = string.Join(",", map.selectedBiomes[i].biomeTypes
+                //        .Where(x => x != Biome.BiomeType.Shore && x != Biome.BiomeType.Volcano)
+                //        .Select(x => LocalizedText.GetText(x.ToString())));
+                //    string text = $"{GetText("Level", i)}({levelStr})";
+
+                //    if (i == todayLevelIndex)
+                //    {
+                //        text = $"({GetText("Today")}){text}";
+                //    }
+                //    Vector2 size = dropDownText.GetPreferredValues(text);
+                //    if (size.x > maxWidth)
+                //    {
+                //        maxWidth = size.x;
+                //    }
+                //    dropdown.options.Add(new TMP_Dropdown.OptionData(text));
+                //}
                 dropdownRect.sizeDelta = new Vector2(maxWidth + 80, dropdownRect.sizeDelta.y);
                 float itemHeight = 25f;
                 float maxVisibleCount = 8;
-                float templateHeight = Mathf.Min(map.ScenePaths.Length * itemHeight, maxVisibleCount * itemHeight);
+                float templateHeight = Mathf.Min(map.selectedBiomes.Count * itemHeight, maxVisibleCount * itemHeight);
                 templateRect.sizeDelta = new Vector2(0, templateHeight);
                 var scrollRect = templateGO.AddComponent<ScrollRect>();
                 scrollRect.content = contentRect;
@@ -441,7 +485,7 @@ namespace PeakLevelSelect
 
                 if (viewportGO.GetComponent<RectMask2D>() == null)
                     viewportGO.AddComponent<RectMask2D>();
-                contentRect.sizeDelta = new Vector2(0, map.ScenePaths.Length * itemHeight);
+                contentRect.sizeDelta = new Vector2(0, map.selectedBiomes.Count * itemHeight);
                 dropdown.onValueChanged.AddListener((value) =>
                 {
                     To1.text = value.ToString();
@@ -462,6 +506,7 @@ namespace PeakLevelSelect
                 }
                 else
                 {
+                    //DailyInvoke();
                     if (PeakLevelSelectPlugin.SelectedLevel.Value < dropdown.options.Count)
                     {
                         dropdown.value = PeakLevelSelectPlugin.SelectedLevel.Value;
