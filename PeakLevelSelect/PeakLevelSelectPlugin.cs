@@ -199,12 +199,12 @@ namespace PeakLevelSelect
                 //    Debug.LogError($"Scene paths is {map.ScenePaths.Length} but selected biomes is {map.selectedBiomes.Count}");
                 //}
 
-                string biomeIdStr = map.GetBiomeID(todayLevelIndex);
-                string joinedBiomes = ParseBiomeID(biomeIdStr);
-                if (!string.IsNullOrEmpty(joinedBiomes))
-                {
-                    dropDownText.text += $"({joinedBiomes})";
-                }
+                //string biomeIdStr = map.GetBiomeID(todayLevelIndex);
+                //string joinedBiomes = ParseBiomeID(biomeIdStr);
+                //if (!string.IsNullOrEmpty(joinedBiomes))
+                //{
+                //    dropDownText.text += $"({joinedBiomes})";
+                //}
             }
             else
             {
@@ -229,30 +229,6 @@ namespace PeakLevelSelect
 
         private static Image dropdownImage;
 
-        private static readonly Dictionary<char, string> BiomeCharToName = new Dictionary<char, string>
-        {
-            { 'S', "Shore" },
-            { 'T', "Tropics" },
-            { 'A', "Alpine" },
-            { 'V', "Volcano" },
-            { 'P', "Peak" },
-            { 'M', "Mesa" },
-            { 'R', "Roots" }
-        };
-
-        private static string ParseBiomeID(string biomeID)
-        {
-            if (string.IsNullOrEmpty(biomeID)) return "";
-            var list = new List<string>();
-            foreach (char c in biomeID)
-            {
-                if (c != 'S' && c != 'V' && BiomeCharToName.TryGetValue(c, out string value))
-                {
-                    list.Add(global::LocalizedText.GetText(value));
-                }
-            }
-            return string.Join(",", list);
-        }
 
         private static List<string> MakeList(params (LocalizedText.Language lang, string text)[] items)
         {
